@@ -102,36 +102,33 @@ both_rate <- data %>%
 
 ```
 
-Show the distribution of literal responses for each participant:
+
 ```{r}
 #Group by participant_id
-participant_data <- data %>% 
-  group_by(participant_id) 
+plausible_data <- data %>% #Only look at plausible
+  filter(plausibility == "plausible") %>%
+  group_by(participant_id) %>%
+  summarize( #Get literal response rate for each condition, and calculate confidence intervals
+    literal_response_rate = mean(is_literal == "literal"),
+    n = n(),
+    ci = 1.96 * sqrt(literal_response_rate * (1 - literal_response_rate) / n)
+  )
 
-#Get literal response rate for plausible and implausible conditions as two separate variables
-summarized_participant_data <- participant_data %>% 
-  summarize(literal_response_rate_implausible = mean(literal_response == "literal" & plausibility == "implausible"),
-            literal_response_rate_plausible = mean(literal_response == "literal" & plausibility == "plausible"))
+implausible_data <- data %>% #Only look at plausible
+  filter(plausibility == "implausible") %>%
+  group_by(participant_id) %>%
+  summarize( #Get literal response rate for each condition, and calculate confidence intervals
+    literal_response_rate = mean(is_literal == "literal"),
+    n = n(),
+    ci = 1.96 * sqrt(literal_response_rate * (1 - literal_response_rate) / n)
+  )
 
-#For implausible condition: plot literal response rate for each participant
-ggplot(summarized_participant_data, aes(x = literal_response_rate_implausible)) +
-  geom_histogram(binwidth = .1, fill = "#A31F34") +
-  labs(x = "Literal Response Rate", y = "Frequency", title = "Literal Response Rate for Implausible Condition") +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-```{r}
-```
-
-```{r}
-```
-
-```{r}
-```
-
+implausible_data
 
 
 ```
+
+
 
 
 
