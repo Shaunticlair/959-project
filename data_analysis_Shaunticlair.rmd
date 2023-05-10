@@ -51,7 +51,7 @@ First, load the data and filter out the filler conditions:
 
 ```{r}
 ## Load data
-data <- read.csv("practice_data.csv", header = TRUE, sep = ",")
+data <- read.csv("5_participants_real_data.csv", header = TRUE, sep = ",")
 
 #Remove cond filler
 data <- data %>% filter(cond != "filler")
@@ -98,9 +98,43 @@ both_rate <- data %>%
     n = n(),
     ci = 1.96 * sqrt(literal_response_rate * (1 - literal_response_rate) / n)
   )
+
+
 ```
 
-Plot results:
+Show the distribution of literal responses for each participant:
+```{r}
+#Group by participant_id
+participant_data <- data %>% 
+  group_by(participant_id) 
+
+#Get literal response rate for plausible and implausible conditions as two separate variables
+summarized_participant_data <- participant_data %>% 
+  summarize(literal_response_rate_implausible = mean(literal_response == "literal" & plausibility == "implausible"),
+            literal_response_rate_plausible = mean(literal_response == "literal" & plausibility == "plausible"))
+
+#For implausible condition: plot literal response rate for each participant
+ggplot(summarized_participant_data, aes(x = literal_response_rate_implausible)) +
+  geom_histogram(binwidth = .1, fill = "#A31F34") +
+  labs(x = "Literal Response Rate", y = "Frequency", title = "Literal Response Rate for Implausible Condition") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+
+
+```
+
+
+
 ```{r}
 
 #Plot literal response rate for both conditions
