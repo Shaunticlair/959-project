@@ -107,8 +107,8 @@ def csv_gen_font_images(font, input_csv, output_csv):
             sentence_img = text_to_image(sentence, font_file(font), 72, (0, 0, 0, 255))
             prompt_img = text_to_image(prompt, font_file(font), 72, (0, 0, 0, 255))
 
-            sentence_image_name = f'{font}_{sentence}.png'
-            prompt_image_name = f'{font}_{prompt}.png'
+            sentence_image_name = f'{font}_{sentence}.png'.replace('?','').replace('/','')
+            prompt_image_name = f'{font}_{prompt}.png'.replace('?','').replace('/','')
 
             #Save the image
             sentence_img.save(sentence_image_name)

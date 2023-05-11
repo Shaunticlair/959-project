@@ -25,6 +25,12 @@ if(!require(sjPlot)) {install.packages("sjPlot"); require(sjPlot)}
 if(!require(lme4)) {install.packages("lme4"); require(lme4)}
 if(!require(lmerTest)) {install.packages("lmerTest"); require(lmerTest)}
 if(!require(languageR)) {install.packages("languageR"); require(languageR)}
+
+if (!requireNamespace("MCMCglmm", quietly = TRUE)) {
+  install.packages("MCMCglmm")
+}
+
+library(MCMCglmm)
 ## Set plotting preferences
 ggplot2::theme_set(ggplot2::theme_bw(base_size=18))
 ggplot2::theme_update(panel.grid = ggplot2::element_blank(), 
@@ -55,7 +61,7 @@ data <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
 
 #Remove cond filler
 data <- data %>% filter(cond != "filler")
-#Remove conds tha contain active or passive
+#Remove conds that contain active or passive
 data <- data %>% filter(!grepl("active", cond))
 data <- data %>% filter(!grepl("passive", cond))
 
@@ -105,17 +111,9 @@ data <- data %>% #Filter out data with low plausibile literal response rate: ass
 
 ```
 
+Next: get literal rates sorted by do vs. po and implausible vs. plausible at the same time
 
 ```{r}
-#Show literal response rate for do vs. po
-dopo_literal <- data %>% 
-  group_by(do_po) %>% 
-  summarize(literal_response_rate = mean(is_literal == "literal"))
-
-#Show literal response rate for implausible vs. plausible
-plausibility_literal <- data %>% 
-  group_by(plausibility) %>% 
-  summarize(literal_response_rate = mean(is_literal == "literal"))
 
 #Show literal response rate for do vs. po and implausible vs. plausible
 both_literal <- data %>%
@@ -130,27 +128,11 @@ both_literal <- data %>%
 
 ```
 
+Then, we plot the combination.
 
 ```{r}
-#Plot literal response rate for do vs. po
-ggplot(both_rate, aes(x = do_po, y = literal_response_rate, fill = do_po)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  scale_fill_manual(values = c("#A31F34", "#8A8B8C")) +
-  labs(x = "Condition", y = "Literal Response Rate", title = "Literal Response Rate by Condition") +
-  scale_y_continuous(limits = c(0, 1)) +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  geom_errorbar(aes(ymin = literal_response_rate - ci, ymax = literal_response_rate + ci), width = .2, position = position_dodge(.9))
-```
-
-
-
-
-
-
-```{r}
-
-#Plot literal response rate for both conditions
-ggplot(both_rate, aes(x = do_po, y = literal_response_rate, fill = plausibility)) +
+#Plot literal response rate for do vs. po and implausible vs. plausible
+ggplot(both_literal, aes(x = do_po, y = literal_response_rate, fill = plausibility)) +
   geom_bar(stat = "identity", position = "dodge") +
   scale_fill_manual(values = c("implausible" = "#A31F34", "plausible" = "#8A8B8C")) +
   labs(x = "Condition", y = "Literal Response Rate", title = "Literal Response Rate by Condition") +
@@ -159,16 +141,68 @@ ggplot(both_rate, aes(x = do_po, y = literal_response_rate, fill = plausibility)
   geom_errorbar(aes(ymin = literal_response_rate - ci, ymax = literal_response_rate + ci), width = .2, position = position_dodge(.9))
 ```
 
+Filter out plausible data, and plot the literal response rate for do vs. po.
+
+```{r}
+#Filter out plausible data
+implausible_data <- data %>% filter(plausibility == "implausible")
+
+#Get literal response rate for do vs. po, with ci
+dopo_literal <- implausible_data %>% 
+  group_by(do_po) %>% 
+  summarize( #Get literal response rate for each condition, and calculate confidence intervals
+    literal_response_rate = mean(is_literal == "literal"),
+    n = n(),
+    ci = 1.96 * sqrt(literal_response_rate * (1 - literal_response_rate) / n)
+  )
+
+#Plot literal response rate for do is red, po is grey
+ggplot(dopo_literal, aes(x = do_po, y = literal_response_rate, fill = do_po)) + # <- Add fill = do_po
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("DO" = "#A31F34", "PO" = "#8A8B8C")) +
+  labs(x = "Condition", y = "Literal Response Rate", title = "Literal Response Rate by Condition") +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_errorbar(aes(ymin = literal_response_rate - ci, ymax = literal_response_rate + ci), width = .2, position = position_dodge(.9))
+```
+
+Next, run a logistic regression on the data to see if the difference between do and po is significant.
+
+We'll restrict our scope to implausible data, since we're interested in the effect of do vs. po on literal response rate.
+
+```{r}
+
+
+# Set up an uninformative prior
+prior <- list(G = list(G1 = list(V = 1e+06, nu = 0.002),
+                       G2 = list(V = 1e+06, nu = 0.002)))
+
+
+# Fit the Bayesian mixed-effects model using MCMC
+mcmcglmm_model <- MCMCglmm(is_literal ~ do_po,
+                           random = ~ item + participant_id, #Includes both slopes and intercepts
+                           family = "categorical",
+                           data = implausible_data,
+                           prior = prior,
+                           nitt = 100000,  # Number of MCMC iterations
+                           thin = 10,     # Thinning interval
+                           verbose = FALSE)
+
+# Show results
+summary(mcmcglmm_model)
+```
+
 ```{r}
 
 # Lmer model
-contrasts(data$do_po) <- c(-.5, .5)
+contrasts(implausible_data$do_po) <- c(-.5, .5)
 #contrasts(data$plausibility) <- c(-.5, .5)
 #Contrast the is_literal variable
-contrasts(data$is_literal) <- c(0,1)
+contrasts(implausible_data$is_literal) <- c(0,1)
 
-#Since our result is categorical, we need to do a logistic regression
-model <- glmer(is_literal ~ do_po + (1|item) , data = data, family = binomial(link = "logit"))
+#Since our result is categorical, we need to do a logistic regression: include intercepts and slopes
+model <- glmer(is_literal ~ do_po + (1|item) , 
+data = implausible_data, family = binomial(link = "logit"))
 
 #Show results
 summary(model)
