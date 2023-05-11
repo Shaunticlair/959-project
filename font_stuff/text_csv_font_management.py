@@ -65,10 +65,10 @@ def text_to_image(
 
     font = ImageFont.truetype(font_filepath, size=font_size)
 
-    img = Image.new("RGBA", (font.getmask(text).size[0], font.getmask(text).size[1]+20 ) )
+    img = Image.new("RGBA", (font.getmask(text).size[0]+20, font.getmask(text).size[1]+20 ) )
 
     draw = ImageDraw.Draw(img)
-    draw_point = (0, 0)
+    draw_point = (0, -10)
 
     draw.multiline_text(draw_point, text, font=font, fill=color)
 
@@ -84,9 +84,9 @@ def text_to_image(
 
 #Save image
 #img.save('text.png')
-
 #Create helper functions for formatting
-html_file = lambda name: f'<img src="https://github.com/Shaunticlair/959-project/blob/main/font_stuff/{name}?raw=true" width="100” height ="100">'
+html_file = lambda name, width: f'<img src="https://github.com/Shaunticlair/959-project/blob/main/font_stuff/{name}?raw=true" width="{width}” height ="300">'
+html_file = lambda name, width: f'<img src="https://sruiz-files.s3.us-east-2.amazonaws.com/{name}?raw=true" width="{width}” height ="300">'
 
 font_file = lambda name: f'{name}.ttf'
 
@@ -107,6 +107,10 @@ def csv_gen_font_images(font, input_csv, output_csv):
             sentence = row[3]
             prompt = row[4]
 
+            sentence_width = round(300* (len(sentence))/40)
+            prompt_width = round(300* (len(prompt))/40)
+
+
             #Create an image for the sentence and prompt
             sentence_img = text_to_image(sentence, font_file(font), 72, (0, 0, 0, 255))
             prompt_img = text_to_image(prompt, font_file(font), 72, (0, 0, 0, 255))
@@ -119,12 +123,23 @@ def csv_gen_font_images(font, input_csv, output_csv):
             prompt_img.save(prompt_image_name)
 
             #Replace the sentence and prompt with the html code
-            row[3] = html_file(sentence_image_name)
-            row[4] = html_file(prompt_image_name)
+            row[3] = html_file(sentence_image_name,sentence_width) #Sentence
+            row[4] = html_file(prompt_image_name, prompt_width) #Prompt
 
             #Write the row to the output file
             csv_writer.writerow(row)
 
-csv_gen_font_images('comic', 'font_stuff/base_stimuli.csv', 'comic stimuli.csv')
+#Create an image that says yes or no
+def csv_gen_yes_no_images(font):
+    yes_img = text_to_image('Yes', font_file(font), 72, (0, 0, 0, 255))
+    no_img = text_to_image('No', font_file(font), 72, (0, 0, 0, 255))
+
+    yes_img.save(f'{font}_yes.png')
+    no_img.save(f'{font}_no.png')
+
+csv_gen_yes_no_images('comic')
+
+#csv_gen_font_images('comic', 'font_stuff/base_stimuli.csv', 'comic stimuli.csv')
+
 
             
