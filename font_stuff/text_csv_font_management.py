@@ -121,6 +121,6 @@ def csv_gen_font_images(font, input_csv, output_csv):
             #Write the row to the output file
             csv_writer.writerow(row)
 
-csv_gen_font_images('comic', 'font_stuff/base_stimuli.csv', 'comic stimuli')
+csv_gen_font_images('comic', 'font_stuff/base_stimuli.csv', 'comic stimuli.csv')
 
             
