@@ -51,7 +51,7 @@ First, load the data and filter out the filler conditions:
 
 ```{r}
 ## Load data
-data <- read.csv("5_participants_real_data.csv", header = TRUE, sep = ",")
+data <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
 
 #Remove cond filler
 data <- data %>% filter(cond != "filler")
@@ -64,6 +64,8 @@ data <- data %>% filter(!grepl("passive", cond))
 Group data two different ways:
 - cond that contains "do" or "po"
 - cond that contains "implausible" or "plausible"
+
+And add literal response as a variable.
 
 ```{r}
 #Create variable for cond that contains "do" or "po"
@@ -79,7 +81,32 @@ data <- data %>%
 data <- data %>% 
   mutate(is_literal = ifelse(response == literal_response, "literal", "nonliteral")) %>% #Create factor
   mutate(is_literal = factor(is_literal, levels = c("nonliteral", "literal"))) #Set factor levels
+```
 
+We look at the literal rate for each participant_id, so we can filter out those with a literal rate below .75 for plausible data:
+
+```{r}
+#Group by participant_id
+plausible_participant_grouped_data <- data %>% #Only look at plausible
+  filter(plausibility == "plausible") %>%
+  group_by(participant_id) %>%
+  summarize( #Get literal response rate for each condition, and calculate confidence intervals
+    literal_response_rate = mean(is_literal == "literal"),
+    n = n(),
+    ci = 1.96 * sqrt(literal_response_rate * (1 - literal_response_rate) / n)
+  )
+
+plausible_participant_grouped_data
+
+#For "data": filter out participants with literal rate below .75 for "plausible_data"
+ppgd <- plausible_participant_grouped_data
+data <- data %>% #Filter out data with low plausibile literal response rate: assumed to not be reading as accurately
+  filter(participant_id %in% ppgd$participant_id[ppgd$literal_response_rate >= .75])
+
+```
+
+
+```{r}
 #Show literal response rate for do vs. po
 dopo_literal <- data %>% 
   group_by(do_po) %>% 
@@ -91,7 +118,7 @@ plausibility_literal <- data %>%
   summarize(literal_response_rate = mean(is_literal == "literal"))
 
 #Show literal response rate for do vs. po and implausible vs. plausible
-both_rate <- data %>%
+both_literal <- data %>%
   group_by(do_po, plausibility) %>%
   summarize( #Get literal response rate for each condition, and calculate confidence intervals
     literal_response_rate = mean(is_literal == "literal"),
@@ -100,33 +127,21 @@ both_rate <- data %>%
   )
 
 
+
 ```
 
 
 ```{r}
-#Group by participant_id
-plausible_data <- data %>% #Only look at plausible
-  filter(plausibility == "plausible") %>%
-  group_by(participant_id) %>%
-  summarize( #Get literal response rate for each condition, and calculate confidence intervals
-    literal_response_rate = mean(is_literal == "literal"),
-    n = n(),
-    ci = 1.96 * sqrt(literal_response_rate * (1 - literal_response_rate) / n)
-  )
-
-implausible_data <- data %>% #Only look at plausible
-  filter(plausibility == "implausible") %>%
-  group_by(participant_id) %>%
-  summarize( #Get literal response rate for each condition, and calculate confidence intervals
-    literal_response_rate = mean(is_literal == "literal"),
-    n = n(),
-    ci = 1.96 * sqrt(literal_response_rate * (1 - literal_response_rate) / n)
-  )
-
-implausible_data
-
-
+#Plot literal response rate for do vs. po
+ggplot(both_rate, aes(x = do_po, y = literal_response_rate, fill = do_po)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("#A31F34", "#8A8B8C")) +
+  labs(x = "Condition", y = "Literal Response Rate", title = "Literal Response Rate by Condition") +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_errorbar(aes(ymin = literal_response_rate - ci, ymax = literal_response_rate + ci), width = .2, position = position_dodge(.9))
 ```
+
 
 
 
@@ -145,14 +160,15 @@ ggplot(both_rate, aes(x = do_po, y = literal_response_rate, fill = plausibility)
 ```
 
 ```{r}
+
 # Lmer model
 contrasts(data$do_po) <- c(-.5, .5)
-contrasts(data$plausibility) <- c(-.5, .5)
+#contrasts(data$plausibility) <- c(-.5, .5)
 #Contrast the is_literal variable
 contrasts(data$is_literal) <- c(0,1)
 
 #Since our result is categorical, we need to do a logistic regression
-model <- glmer(is_literal ~ do_po * plausibility + (1|item), data = data, family = binomial(link = "logit"))
+model <- glmer(is_literal ~ do_po + (1|item) , data = data, family = binomial(link = "logit"))
 
 #Show results
 summary(model)
@@ -160,4 +176,38 @@ summary(model)
 
 ```
 
+Creating a simple dataset with one data point in each condition: 
+Cross between stimulus category (face vs. object) and emotional contents (neutral vs. emotional)
+```{r}
+#Create dataset
+data <- data.frame(
+  stimulus_category = c("face", "face", "object", "object"),
+  emotional_content = c("neutral", "emotional", "neutral", "emotional"),
+  response = c(.5, .7, .6, .95)
+)
 
+#Group by stimulus category and emotional content
+data <- data %>%
+  group_by(stimulus_category, emotional_content) %>%
+  summarize( #Get literal response rate for each condition, and calculate confidence intervals
+    activation_magnitude = mean(response),
+  )
+
+#Plot literal response rate for both conditions
+ggplot(data, aes(x = stimulus_category, y = activation_magnitude, fill = emotional_content)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("emotional" = "#A31F34", "neutral" = "#8A8B8C")) +
+  labs(x = "Stimulus Category", y = "Activation Magnitude", title = "Activation by Condition") +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20),
+    axis.title.x = element_text(size = 26),
+    axis.title.y = element_text(size = 26),
+    axis.text.x = element_text(size = 24),
+    axis.text.y = element_text(size = 24),
+    legend.text = element_text(size = 24),
+    legend.title = element_text(size = 26)
+  )
+
+
+```
