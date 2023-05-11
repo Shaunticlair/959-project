@@ -99,6 +99,10 @@ def csv_gen_font_images(font, input_csv, output_csv):
 
         #Iterate through each row in the csv
         for row in csv_reader:
+            #Skip the header row
+            if row[0] == 'experiment':
+                csv_writer.writerow(row)
+                continue
             #Get the sentence and prompt from the row
             sentence = row[3]
             prompt = row[4]
