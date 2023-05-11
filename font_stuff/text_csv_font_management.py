@@ -86,7 +86,7 @@ def text_to_image(
 #img.save('text.png')
 
 #Create helper functions for formatting
-html_file = lambda name: f'<img src="https://github.com/Shaunticlair/959-project/font_stuff/blob/main/{name}?raw=true" width="100” height ="100">'
+html_file = lambda name: f'<img src="https://github.com/Shaunticlair/959-project/blob/main/font_stuff/{name}?raw=true" width="100” height ="100">'
 
 font_file = lambda name: f'{name}.ttf'
 
