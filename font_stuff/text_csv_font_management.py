@@ -83,6 +83,7 @@ def text_to_image(
 #img = text_to_image('Hello World', 'comic.ttf', 72, (0, 0, 0, 255))
 
 #Save image
+options = '<img src="https://github.com/Shaunticlair/959-project/blob/main/comicyes.png?raw=true" width="25” height ="25">_<img src="https://github.com/Shaunticlair/959-project/blob/main/comicno.png?raw=true" width="20” height ="30">'
 #img.save('text.png')
 #Create helper functions for formatting
 html_file = lambda name, width: f'<img src="https://github.com/Shaunticlair/959-project/blob/main/font_stuff/{name}?raw=true" width="{width}” height ="300">'
@@ -125,6 +126,7 @@ def csv_gen_font_images(font, input_csv, output_csv):
             #Replace the sentence and prompt with the html code
             row[3] = html_file(sentence_image_name,sentence_width) #Sentence
             row[4] = html_file(prompt_image_name, prompt_width) #Prompt
+            row[6] = options #Options
 
             #Write the row to the output file
             csv_writer.writerow(row)
@@ -137,9 +139,31 @@ def csv_gen_yes_no_images(font):
     yes_img.save(f'{font}_yes.png')
     no_img.save(f'{font}_no.png')
 
-csv_gen_yes_no_images('comic')
+#csv_gen_yes_no_images('comic')
 
 #csv_gen_font_images('comic', 'font_stuff/base_stimuli.csv', 'comic stimuli.csv')
 
 
-            
+def link_to_yesno(input_csv, output_csv):
+    yeslink = '<img src="https://github.com/Shaunticlair/959-project/blob/main/comicyes.png?raw=true" width="25” height ="25">'
+    nolink = '<img src="https://github.com/Shaunticlair/959-project/blob/main/comicno.png?raw=true" width="20” height ="30">'
+
+    with open(input_csv, 'r') as input_file, open(output_csv, 'w', newline='') as output_file:
+        #Grab row 6, response
+
+        csv_reader = csv.reader(input_file)
+        csv_writer = csv.writer(output_file)
+
+        for row in csv_reader:
+            if row[0] == 'participant_id':
+                csv_writer.writerow(row)
+                continue
+            print(row[6])
+            if row[6] == yeslink:
+                row[6] = 'Yes'
+            elif row[6] == nolink:
+                row[6] = 'No'
+            csv_writer.writerow(row)
+
+link_to_yesno('9.59 Extension.csv', '9.59_Extension_5_participants.csv')
+
