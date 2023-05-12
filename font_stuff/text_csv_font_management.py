@@ -158,12 +158,11 @@ def link_to_yesno(input_csv, output_csv):
             if row[0] == 'participant_id':
                 csv_writer.writerow(row)
                 continue
-            print(row[6])
             if row[6] == yeslink:
                 row[6] = 'Yes'
             elif row[6] == nolink:
                 row[6] = 'No'
             csv_writer.writerow(row)
 
-link_to_yesno('9.59 Extension.csv', '9.59_Extension_5_participants.csv')
+link_to_yesno('9.59 Extension.csv', '9.59_Extension_40_participants.csv')
 

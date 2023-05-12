@@ -57,7 +57,16 @@ First, load the data and filter out the filler conditions:
 
 ```{r}
 ## Load data
-data <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
+arial_data <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
+comic_data <- read.csv("9.59_Extension_40_participants.csv", header = TRUE, sep = ",")
+
+#Add column for font
+arial_data <- arial_data %>% mutate(font = "arial")
+comic_data <- comic_data %>% mutate(font = "comic")
+
+#Combine arial and comic into one dataframe
+data <- rbind(arial_data, comic_data)
+
 
 #Remove cond filler
 data <- data %>% filter(cond != "filler")
@@ -115,30 +124,30 @@ Next: get literal rates sorted by do vs. po and implausible vs. plausible at the
 
 ```{r}
 
-#Show literal response rate for do vs. po and implausible vs. plausible
+#Show literal response rate for do vs. po, implausible vs. plausible, and font
 both_literal <- data %>%
-  group_by(do_po, plausibility) %>%
+  group_by(do_po, plausibility, font) %>%
   summarize( #Get literal response rate for each condition, and calculate confidence intervals
     literal_response_rate = mean(is_literal == "literal"),
     n = n(),
     ci = 1.96 * sqrt(literal_response_rate * (1 - literal_response_rate) / n)
   )
 
-
-
 ```
 
 Then, we plot the combination.
 
 ```{r}
-#Plot literal response rate for do vs. po and implausible vs. plausible
-ggplot(both_literal, aes(x = do_po, y = literal_response_rate, fill = plausibility)) +
+#Plot literal response rate for do vs. po and implausible vs. plausible, create a separate plot for each font
+ggplot(both_literal, aes(x = do_po, y = literal_response_rate, fill = plausibility)) + # <- Add fill = plausibility
   geom_bar(stat = "identity", position = "dodge") +
-  scale_fill_manual(values = c("implausible" = "#A31F34", "plausible" = "#8A8B8C")) +
-  labs(x = "Condition", y = "Literal Response Rate", title = "Literal Response Rate by Condition") +
+  facet_wrap(~font) +
+  scale_fill_manual(values = c("#A31F34", "#8A8B8C")) +
+  scale_x_discrete(labels = c("do", "po")) +
   scale_y_continuous(limits = c(0, 1)) +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  geom_errorbar(aes(ymin = literal_response_rate - ci, ymax = literal_response_rate + ci), width = .2, position = position_dodge(.9))
+  labs(x = "Condition", y = "Literal response rate", fill = "Plausibility") +
+  theme(legend.position = "bottom")
+```
 ```
 
 Filter out plausible data, and plot the literal response rate for do vs. po.
@@ -149,13 +158,38 @@ implausible_data <- data %>% filter(plausibility == "implausible")
 
 #Get literal response rate for do vs. po, with ci
 dopo_literal <- implausible_data %>% 
-  group_by(do_po) %>% 
+  group_by(do_po, font) %>% 
   summarize( #Get literal response rate for each condition, and calculate confidence intervals
     literal_response_rate = mean(is_literal == "literal"),
     n = n(),
     ci = 1.96 * sqrt(literal_response_rate * (1 - literal_response_rate) / n)
   )
+```
 
+For the replication:
+```{r}
+#Filter by arial
+dopo_literal_arial <- dopo_literal %>% filter(font == "arial")
+
+ggplot(dopo_literal_arial, aes(x = do_po, y = literal_response_rate, fill = do_po)) + # <- Add fill = do_po
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("DO" = "#A31F34", "PO" = "#8A8B8C")) +
+  labs(x = "Condition", y = "Literal Response Rate", title = "Literal Response Rate by Condition") +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme(
+  plot.title = element_text(hjust = 0.5, size = 40),
+  axis.title.x = element_text(size = 26),
+  axis.title.y = element_text(size = 26),
+  axis.text.x = element_text(size = 36),
+  axis.text.y = element_text(size = 24),
+  legend.text = element_text(size = 36),
+  legend.title = element_text(size = 36))+
+  geom_errorbar(aes(ymin = literal_response_rate - ci, ymax = literal_response_rate + ci), width = .2, position = position_dodge(.9))
+```
+
+And for the extension:
+
+```{r}
 #Plot literal response rate for do is red, po is grey
 ggplot(dopo_literal, aes(x = do_po, y = literal_response_rate, fill = do_po)) + # <- Add fill = do_po
   geom_bar(stat = "identity") +
@@ -163,6 +197,17 @@ ggplot(dopo_literal, aes(x = do_po, y = literal_response_rate, fill = do_po)) + 
   labs(x = "Condition", y = "Literal Response Rate", title = "Literal Response Rate by Condition") +
   scale_y_continuous(limits = c(0, 1)) +
   theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~font) +
+  theme(
+  plot.title = element_text(hjust = 0.5, size = 40),
+  axis.title.x = element_text(size = 26),
+  axis.title.y = element_text(size = 26),
+  axis.text.x = element_text(size = 36),
+  axis.text.y = element_text(size = 24),
+  legend.text = element_text(size = 36),
+  legend.title = element_text(size = 36),
+  panel.spacing.x = unit(5, "lines"),
+  strip.text = element_text(size = 30))+
   geom_errorbar(aes(ymin = literal_response_rate - ci, ymax = literal_response_rate + ci), width = .2, position = position_dodge(.9))
 ```
 
@@ -170,6 +215,26 @@ Next, run a logistic regression on the data to see if the difference between do 
 
 We'll restrict our scope to implausible data, since we're interested in the effect of do vs. po on literal response rate.
 
+Set model for arial only:
+```{r}
+#Filter implausible_data by arial
+implausible_data_arial <- implausible_data %>% filter(font == "arial")
+
+prior <- list(G = list(G1 = list(V = 1e+06, nu = 0.002),
+                       G2 = list(V = 1e+06, nu = 0.002)))
+
+# Fit the Bayesian mixed-effects model using MCMC
+mcmcglmm_model <- MCMCglmm(is_literal ~ do_po,
+                           random = ~ item + participant_id, #Includes both slopes and intercepts
+                           family = "categorical",
+                           data = implausible_data_arial,
+                           prior = prior,
+                           nitt = 100000,  # Number of MCMC iterations
+                           thin = 10,     # Thinning interval
+                           verbose = FALSE)
+
+summary(mcmcglmm_model)
+```
 ```{r}
 
 
@@ -179,7 +244,7 @@ prior <- list(G = list(G1 = list(V = 1e+06, nu = 0.002),
 
 
 # Fit the Bayesian mixed-effects model using MCMC
-mcmcglmm_model <- MCMCglmm(is_literal ~ do_po,
+mcmcglmm_model <- MCMCglmm(is_literal ~ do_po * font,
                            random = ~ item + participant_id, #Includes both slopes and intercepts
                            family = "categorical",
                            data = implausible_data,
@@ -192,23 +257,7 @@ mcmcglmm_model <- MCMCglmm(is_literal ~ do_po,
 summary(mcmcglmm_model)
 ```
 
-```{r}
 
-# Lmer model
-contrasts(implausible_data$do_po) <- c(-.5, .5)
-#contrasts(data$plausibility) <- c(-.5, .5)
-#Contrast the is_literal variable
-contrasts(implausible_data$is_literal) <- c(0,1)
-
-#Since our result is categorical, we need to do a logistic regression: include intercepts and slopes
-model <- glmer(is_literal ~ do_po + (1|item) , 
-data = implausible_data, family = binomial(link = "logit"))
-
-#Show results
-summary(model)
-
-
-```
 
 Creating a simple dataset with one data point in each condition: 
 Cross between stimulus category (face vs. object) and emotional contents (neutral vs. emotional)
