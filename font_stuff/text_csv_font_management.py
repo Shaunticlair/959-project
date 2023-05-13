@@ -164,5 +164,5 @@ def link_to_yesno(input_csv, output_csv):
                 row[6] = 'No'
             csv_writer.writerow(row)
 
-link_to_yesno('9.59 Extension.csv', '9.59_Extension_40_participants.csv')
+link_to_yesno('to_be_processed.csv', '9.59_Extension_80_participants.csv')
 
