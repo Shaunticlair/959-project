@@ -57,8 +57,8 @@ First, load the data and filter out the filler conditions:
 
 ```{r}
 ## Load data
-arial_data <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
-comic_data <- read.csv("9.59_Extension_40_participants.csv", header = TRUE, sep = ",")
+arial_data <- read.csv("9.59_Replication_80_participants.csv", header = TRUE, sep = ",")
+comic_data <- read.csv("9.59_Extension_80_participants.csv", header = TRUE, sep = ",")
 
 #Add column for font
 arial_data <- arial_data %>% mutate(font = "arial")
