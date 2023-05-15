@@ -57,17 +57,19 @@ First, load the data and filter out the filler conditions:
 
 ```{r}
 ## Load data
-replication <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
+replication <- read.csv("9.59_Replication_80_participants.csv", header = TRUE, sep = ",")
 #low_noise <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
 high_noise<- read.csv("Pip_Extension_high_noise_45_participants.csv", header = TRUE, sep = ",")
 
-#Add column for font
+
+#Add column for expected_noise
 #arial_data <- arial_data %>% mutate(font = "arial")
+replication <- replication %>% mutate(expected_noise = "null")
 high_noise <- high_noise %>% mutate(expected_noise = "high")
 
 #Combine arial and comic into one dataframe
 #data <- rbind(arial_data, comic_data)
-data <- high_noise
+data <- rbind(high_noise, replication)
 
 
 #Remove cond filler
@@ -157,9 +159,18 @@ Filter out plausible data, and plot the literal response rate for do vs. po.
 ```{r}
 #Filter out plausible data
 implausible_data <- data %>% filter(plausibility == "implausible")
-
+noisy_data <- data %>% filter(expected_noise != "null" )
+replication_data <- data %>% filter(expected_noise == "null" )
 #Get literal response rate for do vs. po, with ci
-dopo_literal <- implausible_data %>% 
+dopo_literal <- noisy_data %>% 
+  group_by(do_po, expected_noise) %>% 
+  summarize( #Get literal response rate for each condition, and calculate confidence intervals
+    literal_response_rate = mean(is_literal == "literal"),
+    n = n(),
+    ci = 1.96 * sqrt(literal_response_rate * (1 - literal_response_rate) / n)
+  )
+
+  dopo_literal_repli <- replication_data %>% 
   group_by(do_po, expected_noise) %>% 
   summarize( #Get literal response rate for each condition, and calculate confidence intervals
     literal_response_rate = mean(is_literal == "literal"),
@@ -170,10 +181,8 @@ dopo_literal <- implausible_data %>%
 
 For the replication:
 ```{r}
-#Filter by arial
-dopo_literal_arial <- dopo_literal %>% filter(font == "arial")
 
-ggplot(dopo_literal_arial, aes(x = do_po, y = literal_response_rate, fill = do_po)) + # <- Add fill = do_po
+ggplot(dopo_literal_repli, aes(x = do_po, y = literal_response_rate, fill = do_po)) + # <- Add fill = do_po
   geom_bar(stat = "identity") +
   scale_fill_manual(values = c("DO" = "#A31F34", "PO" = "#8A8B8C")) +
   labs(x = "Condition", y = "Literal Response Rate", title = "Literal Response Rate by Condition") +
