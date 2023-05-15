@@ -58,14 +58,14 @@ First, load the data and filter out the filler conditions:
 ```{r}
 ## Load data
 replication <- read.csv("9.59_Replication_80_participants.csv", header = TRUE, sep = ",")
-low_noise <- read.csv("Low Noise(3) Psycholinguistics_data_2023_05_15-06_14.csv", header = TRUE, sep = ",")
-high_noise<- read.csv("Pip_Extension_high_noise_45_participants.csv", header = TRUE, sep = ",")
+low_noise_raw <- read.csv("Low Noise(3) Psycholinguistics_data_2023_05_15-06_14.csv", header = TRUE, sep = ",")
+high_noise_raw<- read.csv("Pip_Extension_high_noise_45_participants.csv", header = TRUE, sep = ",")
 
 
 #Add column for expected_noise
-low_noise <- low_noise %>% mutate(expected_noise = "low")
+low_noise <- low_noise_raw %>% mutate(expected_noise = "low")
 replication <- replication %>% mutate(expected_noise = "null")
-high_noise <- high_noise %>% mutate(expected_noise = "high")
+high_noise <- high_noise_raw %>% mutate(expected_noise = "high")
 
 
 #Remove "any_question" column from high_noise 
@@ -73,6 +73,25 @@ high_noise <- subset(high_noise, select = -any_questions)
 low_noise <- subset(low_noise, select = -any_questions)
 
 
+```
+```{r}
+# group data by participant_id
+# remove all columns except participant_id and any_questions
+# summarize any_questions as NA or not NA
+high_noise_q <- subset(high_noise_raw, select = c(participant_id, any_questions))
+low_noise_q <- subset(low_noise_raw, select = c(participant_id, any_questions))
+
+high_noise_q <- high_noise_q %>% 
+  group_by(participant_id) %>%
+  summarize(
+    any_questions = ifelse(any(is.na(any_questions)), "NA", "not NA")
+  )
+
+low_noise_q <- low_noise_q %>% 
+  group_by(participant_id) %>%
+  summarize(
+    any_questions = ifelse(any(is.na(any_questions)), "NA", "not NA")
+  )
 ```
 ```{r}
 #Combine arial and comic into one dataframe
