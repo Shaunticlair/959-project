@@ -170,7 +170,7 @@ noisy_data <- implausible_data %>% filter(expected_noise != "null" )
 replication_data <- implausible_data %>% filter(expected_noise == "null" )
 #Get literal response rate for do vs. po, with ci
 
-dopo_literal <- noisy_data %>% 
+dopo_literal_noisy <- noisy_data %>% 
   group_by(do_po, expected_noise) %>% 
   summarize( #Get literal response rate for each condition, and calculate confidence intervals
     literal_response_rate = mean(is_literal == "literal"),
@@ -190,7 +190,7 @@ dopo_literal <- noisy_data %>%
 For the replication:
 ```{r}
 
-ggplot(dopo_literal, aes(x = do_po, y = literal_response_rate, fill = do_po)) + # <- Add fill = do_po
+ggplot(dopo_literal_repli, aes(x = do_po, y = literal_response_rate, fill = do_po)) + # <- Add fill = do_po
   geom_bar(stat = "identity") +
   scale_fill_manual(values = c("DO" = "#A31F34", "PO" = "#8A8B8C")) +
   labs(x = "Condition", y = "Literal Response Rate", title = "Literal Response Rate by Condition") +
