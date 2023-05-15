@@ -57,15 +57,17 @@ First, load the data and filter out the filler conditions:
 
 ```{r}
 ## Load data
-arial_data <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
-comic_data <- read.csv("9.59_Extension_40_participants.csv", header = TRUE, sep = ",")
+replication <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
+#low_noise <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
+high_noise<- read.csv("Pip_Extension_high_noise_45_participants.csv", header = TRUE, sep = ",")
 
 #Add column for font
-arial_data <- arial_data %>% mutate(font = "arial")
-comic_data <- comic_data %>% mutate(font = "comic")
+#arial_data <- arial_data %>% mutate(font = "arial")
+high_noise <- high_noise %>% mutate(expected_noise = "high")
 
 #Combine arial and comic into one dataframe
-data <- rbind(arial_data, comic_data)
+#data <- rbind(arial_data, comic_data)
+data <- high_noise
 
 
 #Remove cond filler
@@ -126,7 +128,7 @@ Next: get literal rates sorted by do vs. po and implausible vs. plausible at the
 
 #Show literal response rate for do vs. po, implausible vs. plausible, and font
 both_literal <- data %>%
-  group_by(do_po, plausibility, font) %>%
+  group_by(do_po, plausibility, expected_noise) %>%
   summarize( #Get literal response rate for each condition, and calculate confidence intervals
     literal_response_rate = mean(is_literal == "literal"),
     n = n(),
@@ -138,10 +140,10 @@ both_literal <- data %>%
 Then, we plot the combination.
 
 ```{r}
-#Plot literal response rate for do vs. po and implausible vs. plausible, create a separate plot for each font
+#Plot literal response rate for do vs. po and implausible vs. plausible, create a separate plot for each expected_noise
 ggplot(both_literal, aes(x = do_po, y = literal_response_rate, fill = plausibility)) + # <- Add fill = plausibility
   geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~font) +
+  facet_wrap(~expected_noise) +
   scale_fill_manual(values = c("#A31F34", "#8A8B8C")) +
   scale_x_discrete(labels = c("do", "po")) +
   scale_y_continuous(limits = c(0, 1)) +
