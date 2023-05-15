@@ -67,6 +67,13 @@ high_noise<- read.csv("Pip_Extension_high_noise_45_participants.csv", header = T
 replication <- replication %>% mutate(expected_noise = "null")
 high_noise <- high_noise %>% mutate(expected_noise = "high")
 
+
+#Remove "any_question" column from high_noise 
+high_noise <- subset(high_noise, select = -any_questions)
+
+
+```
+```{r}
 #Combine arial and comic into one dataframe
 #data <- rbind(arial_data, comic_data)
 data <- rbind(high_noise, replication)
