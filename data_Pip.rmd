@@ -169,7 +169,8 @@ implausible_data <- data %>% filter(plausibility == "implausible")
 noisy_data <- data %>% filter(expected_noise != "null" )
 replication_data <- data %>% filter(expected_noise == "null" )
 #Get literal response rate for do vs. po, with ci
-dopo_literal <- noisy_data %>% 
+
+dopo_literal <- replication_data %>% 
   group_by(do_po, expected_noise) %>% 
   summarize( #Get literal response rate for each condition, and calculate confidence intervals
     literal_response_rate = mean(is_literal == "literal"),
