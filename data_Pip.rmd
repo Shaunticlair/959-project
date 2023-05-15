@@ -58,25 +58,26 @@ First, load the data and filter out the filler conditions:
 ```{r}
 ## Load data
 replication <- read.csv("9.59_Replication_80_participants.csv", header = TRUE, sep = ",")
-#low_noise <- read.csv("40_participants_real_data.csv", header = TRUE, sep = ",")
+low_noise <- read.csv("Low Noise(3) Psycholinguistics_data_2023_05_15-06_14.csv", header = TRUE, sep = ",")
 high_noise<- read.csv("Pip_Extension_high_noise_45_participants.csv", header = TRUE, sep = ",")
 
 
 #Add column for expected_noise
-#arial_data <- arial_data %>% mutate(font = "arial")
+low_noise <- low_noise %>% mutate(expected_noise = "low")
 replication <- replication %>% mutate(expected_noise = "null")
 high_noise <- high_noise %>% mutate(expected_noise = "high")
 
 
 #Remove "any_question" column from high_noise 
 high_noise <- subset(high_noise, select = -any_questions)
+low_noise <- subset(low_noise, select = -any_questions)
 
 
 ```
 ```{r}
 #Combine arial and comic into one dataframe
 #data <- rbind(arial_data, comic_data)
-data <- rbind(high_noise, replication)
+data <- rbind(high_noise, replication, low_noise)
 
 
 #Remove cond filler
@@ -210,13 +211,13 @@ And for the extension:
 
 ```{r}
 #Plot literal response rate for do is red, po is grey
-ggplot(dopo_literal, aes(x = do_po, y = literal_response_rate, fill = do_po)) + # <- Add fill = do_po
+ggplot(dopo_literal_noisy, aes(x = do_po, y = literal_response_rate, fill = do_po)) + # <- Add fill = do_po
   geom_bar(stat = "identity") +
   scale_fill_manual(values = c("DO" = "#A31F34", "PO" = "#8A8B8C")) +
   labs(x = "Condition", y = "Literal Response Rate", title = "Literal Response Rate by Condition") +
   scale_y_continuous(limits = c(0, 1)) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  facet_wrap(~font) +
+  facet_wrap(~expected_noise) +
   theme(
   plot.title = element_text(hjust = 0.5, size = 40),
   axis.title.x = element_text(size = 26),
@@ -237,7 +238,7 @@ We'll restrict our scope to implausible data, since we're interested in the effe
 Set model for arial only:
 ```{r}
 #Filter implausible_data by arial
-implausible_data_arial <- implausible_data %>% filter(font == "arial")
+
 
 prior <- list(G = list(G1 = list(V = 1e+06, nu = 0.002),
                        G2 = list(V = 1e+06, nu = 0.002)))
@@ -246,7 +247,7 @@ prior <- list(G = list(G1 = list(V = 1e+06, nu = 0.002),
 mcmcglmm_model <- MCMCglmm(is_literal ~ do_po,
                            random = ~ item + participant_id, #Includes both slopes and intercepts
                            family = "categorical",
-                           data = implausible_data_arial,
+                           data = replication_data,
                            prior = prior,
                            nitt = 100000,  # Number of MCMC iterations
                            thin = 10,     # Thinning interval
@@ -263,10 +264,10 @@ prior <- list(G = list(G1 = list(V = 1e+06, nu = 0.002),
 
 
 # Fit the Bayesian mixed-effects model using MCMC
-mcmcglmm_model <- MCMCglmm(is_literal ~ do_po * font,
+mcmcglmm_model <- MCMCglmm(is_literal ~ do_po * expected_noise,
                            random = ~ item + participant_id, #Includes both slopes and intercepts
                            family = "categorical",
-                           data = implausible_data,
+                           data = noisy_data,
                            prior = prior,
                            nitt = 100000,  # Number of MCMC iterations
                            thin = 10,     # Thinning interval
@@ -274,42 +275,4 @@ mcmcglmm_model <- MCMCglmm(is_literal ~ do_po * font,
 
 # Show results
 summary(mcmcglmm_model)
-```
-
-
-
-Creating a simple dataset with one data point in each condition: 
-Cross between stimulus category (face vs. object) and emotional contents (neutral vs. emotional)
-```{r}
-#Create dataset
-data <- data.frame(
-  stimulus_category = c("face", "face", "object", "object"),
-  emotional_content = c("neutral", "emotional", "neutral", "emotional"),
-  response = c(.5, .7, .6, .95)
-)
-
-#Group by stimulus category and emotional content
-data <- data %>%
-  group_by(stimulus_category, emotional_content) %>%
-  summarize( #Get literal response rate for each condition, and calculate confidence intervals
-    activation_magnitude = mean(response),
-  )
-
-#Plot literal response rate for both conditions
-ggplot(data, aes(x = stimulus_category, y = activation_magnitude, fill = emotional_content)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  scale_fill_manual(values = c("emotional" = "#A31F34", "neutral" = "#8A8B8C")) +
-  labs(x = "Stimulus Category", y = "Activation Magnitude", title = "Activation by Condition") +
-  scale_y_continuous(limits = c(0, 1)) +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 20),
-    axis.title.x = element_text(size = 26),
-    axis.title.y = element_text(size = 26),
-    axis.text.x = element_text(size = 24),
-    axis.text.y = element_text(size = 24),
-    legend.text = element_text(size = 24),
-    legend.title = element_text(size = 26)
-  )
-
-
 ```
